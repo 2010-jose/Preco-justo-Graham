@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cálculo do preço justo</title>
+    <style>
+        :root{
+            --bg:#f6f8fb;
+            --card:#ffffff;
+            --muted:#6b7280;
+            --primary:#1f6feb;
+            --danger:#dc2626;
+            --max-width:980px;
+            --radius:10px;
+            --shadow: 0 8px 24px rgba(15,23,42,0.06);
+        }
+        *{box-sizing:border-box}
+        body{margin:0;min-height:100vh;background:var(--bg);font-family:Inter, system-ui, -apple-system, "Segoe UI", Roboto, Arial;color:#0b1220}
+        .container{max-width:var(--max-width);margin:40px auto;padding:16px}
+
+        header.app-header{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;text-align:center}
+        header.app-header h1{margin:0;font-size:1.4rem}
+        header.app-header p{margin:0;color:var(--muted);font-size:0.95rem}
+
+        .card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:20px}
+        .layout{display:grid;grid-template-columns:1fr 360px;gap:20px;align-items:start}
+        @media(max-width:880px){.layout{grid-template-columns:1fr}}
+
+        form{display:flex;flex-direction:column;gap:12px}
+        label{font-size:0.9rem;color:var(--muted)}
+        input[type="text"], input[type="number"]{padding:10px;border:1px solid #e6e9ef;border-radius:8px;font-size:1rem}
+        .row{display:flex;gap:12px}
+        .col-full{flex:1}
+        .col-small{width:130px}
+        .controls{display:flex;gap:10px;align-items:center}
+        .btn{background:var(--primary);color:#fff;border:none;padding:10px 14px;border-radius:8px;cursor:pointer}
+        .btn.secondary{background:#fff;border:1px solid #eaf0ff;color:var(--muted)}
+        .btn.remove{background:transparent;border:1px solid rgba(220,38,38,0.12);color:var(--danger)}
+
+        .result{background:#f8fafc;border-radius:8px;padding:12px;border:1px solid #eef6ff}
+        .result .value{font-weight:700;color:var(--primary);font-size:1.35rem}
+
+        .favorites{background:var(--card);border-radius:8px;padding:12px;border:1px solid #eef6ff}
+        table{width:100%;border-collapse:collapse}
+        th, td{padding:10px;text-align:left;border-bottom:1px solid #f3f6fa;font-size:0.95rem}
+        th{color:var(--muted);font-weight:600}
+        .empty{color:var(--muted);padding:12px;text-align:center}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="app-header">
+            <h1>Calculadora do preço justo — Fórmula de Graham</h1>
+            <p>Calcule o preço justo por ação usando 22,5 × VPA × LPA e salve favoritos.</p>
+        </header>
+
+        <div class="card">
+            <div class="layout">
+                <div>
+                    <form action="/" method="post">
+                        <div class="row">
+                            <div class="col-full">
+                                <label for="ticker">Ticker</label>
+                                <input type="text" id="ticker" name="ticker" placeholder="Ex: PETR4" required value="{{ name_ticker }}">
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-small">
+                                <label for="vpa">VPA</label>
+                                <input type="number" id="vpa" name="vpa" step="any" min="0" placeholder="VPA" required value="{{ vpa }}">
+                            </div>
+                            <div style="flex:1"></div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-small">
+                                <label for="lpa">LPA</label>
+                                <input type="number" id="lpa" name="lpa" step="any" min="0" placeholder="LPA" required value="{{ lpa }}">
+                            </div>
+                            <div style="flex:1"></div>
+                        </div>
+
+                        <div class="row" style="margin-top:8px;align-items:center">
+                            <div class="controls">
+                                <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" name="favorite" {% if favorited %}checked{% endif %}> Favoritar</label>
+                                <button type="submit" class="btn">Calcular</button>
+                                <button type="reset" class="btn secondary">Limpar</button>
+                            </div>
+
+                            <div style="margin-left:auto">
+                                {% if result is not none %}
+                                    <div class="result">
+                                        <div style="font-size:0.85rem;color:var(--muted)">Preço justo de {{ name_ticker }}</div>
+                                        <div class="value">R$ {{ '%.2f' % result }}</div>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <aside>
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                        <strong>Favoritos</strong>
+                        <small style="color:var(--muted)">Salvos localmente</small>
+                    </div>
+
+                    <div class="favorites">
+                        {% if favorites and favorites|length > 0 %}
+                            <table>
+                                <thead>
+                                    <tr><th>Ticker</th><th>Preço justo (R$)</th><th></th></tr>
+                                </thead>
+                                <tbody>
+                                    {% for f in favorites %}
+                                        <tr>
+                                            <td>{{ f.ticker }}</td>
+                                            <td>R$ {{ '%.2f' % f.price }}</td>
+                                            <td style="text-align:right">
+                                                <form action="/remove" method="post" style="display:inline">
+                                                    <input type="hidden" name="ticker" value="{{ f.ticker }}">
+                                                    <button type="submit" class="btn remove">Remover</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        {% else %}
+                            <div class="empty">Nenhum favorito salvo.</div>
+                        {% endif %}
+                    </div>
+                </aside>
+            </div>
+        </div>
+    </div>
+        <footer style="margin-top:18px;text-align:center;color:var(--muted);font-size:0.9rem">
+            Site de José | Todos os direitos reservados
+        </footer>
+</body>
+</html>
